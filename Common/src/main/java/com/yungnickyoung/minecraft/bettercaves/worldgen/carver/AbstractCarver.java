@@ -44,6 +44,12 @@ public abstract class AbstractCarver {
      */
     protected void carveBlock(BetterCavesWorldCarverConfig config, ChunkAccess chunkAccess, BlockPos blockPos, BlockState airBlockState,
                               BlockState liquidBlockState, CarvingMask carvingMask, Aquifer aquifer) {
+        // Configured bottom_y can sit below a dimension that reuses overworld biomes but has a higher floor.
+        // CarvingMask indexes (y - minY), and BitSet.set throws when that index is negative.
+        if (!isInsideBuildHeight(chunkAccess, blockPos)) {
+            return;
+        }
+
         // Mark block as processed - for use by features
         carvingMask.set(blockPos.getX(), blockPos.getY(), blockPos.getZ());
 
@@ -91,6 +97,11 @@ public abstract class AbstractCarver {
         carveBlock(config, chunkAccess, blockPos, Blocks.AIR.defaultBlockState(), liquidBlockState, carvingMask, aquifer);
     }
 
+    private static boolean isInsideBuildHeight(ChunkAccess chunk, BlockPos pos) {
+        int y = pos.getY();
+        return y >= chunk.getMinBuildHeight() && y < chunk.getMaxBuildHeight();
+    }
+
     /**
      * DEBUG method for visualizing cave systems. Used as a replacement for the {@code digBlock} method if the
      * debugVisualizer config option is enabled.
@@ -100,6 +111,7 @@ public abstract class AbstractCarver {
      * @param digBlock   true if the block should be "dug"
      */
     protected void debugCarveBlock(ChunkAccess chunkIn, BlockPos blockPos, boolean digBlock) {
+        if (!isInsideBuildHeight(chunkIn, blockPos)) return;
         if (DEBUG_BLOCKS.contains(chunkIn.getBlockState(blockPos))) return;
 
         if (digBlock) {
